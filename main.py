@@ -12,7 +12,7 @@ def tk_exception_handler(exc, val, tb):
 def setup_logging():
     if not os.path.exists(ERR_FOLDER):
         os.makedirs(ERR_FOLDER)
-    log_file = os.path.join(ERR_FOLDER, "error.log")
+    log_file = ERR_FOLDER + "/error.log"
     logging.basicConfig(
         level=logging.DEBUG,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",

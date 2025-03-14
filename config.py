@@ -1,6 +1,6 @@
 import os
 
-# PROJECT_ROOT: Src の親ディレクトリ
+# PROJECT_ROOT: Src の親ディレクトリをプロジェクトルートとする
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 # 各フォルダのパス

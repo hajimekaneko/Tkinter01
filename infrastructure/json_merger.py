@@ -2,6 +2,7 @@ import json
 import os
 import logging
 from config import TMP_FOLDER, OUT_FOLDER
+from infrastructure.utils import ensure_folder_exists
 
 logger = logging.getLogger(__name__)
 
@@ -10,16 +11,14 @@ def merge_json_files_by_unit(keywords: list) -> dict:
     TMP_FOLDER 内の JSON ファイルを、ファイル名に含まれる単位（keywords に該当する文字列）ごとに合算する。
     
     合算処理:
-      - 各 JSON ファイルは、XLSX 変換時の出力（構造は { sheet: { group: [row, ...], ... }, ... } ）とする。
-      - 各 row に対し、結合主キー：「グループ」「指図書No」「補足」でマージし、
-        「時間」フィールドの数値を合計する。
-      - 合算対象の行（時間が数値の場合）は、"merged_files" フィールドに寄与したファイル名をリストで追加する。
+      - 各 JSON ファイルは XLSX 変換時の出力（構造は { sheet: { group: [row, ...], ... }, ... } ）とする。
+      - 各 row について、結合主キー「グループ」「指図書No」「補足」でマージし、時間の値を合計する。
+      - 合算対象の行（時間が数値の場合）は、"merged_files" フィールドに寄与したファイル名を必ずリストで追加する。
     出力は unit ごとに OUT_FOLDER に output_{unit}.json として保存し、
-    戻り値は、unit → 出力ファイルパス の辞書です。
+    戻り値は unit → 出力ファイルパス の辞書です。
     """
     merged_data = {}
-    if not os.path.exists(OUT_FOLDER):
-        os.makedirs(OUT_FOLDER)
+    ensure_folder_exists(OUT_FOLDER)
     for filename in os.listdir(TMP_FOLDER):
         if not filename.lower().endswith(".json"):
             continue

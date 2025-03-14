@@ -5,7 +5,10 @@ import os
 import shutil
 from use_cases.file_search_usecase import get_matched_files
 from config import TMP_FOLDER, KEYWORDS
+from infrastructure.file_copier import copy_xlsx_file
 from infrastructure.json_writer import write_json_output
+from infrastructure.xlsx_extractor import extract_xlsx_to_json
+from infrastructure.json_merger import merge_json_files_by_unit
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +72,7 @@ class FileSearchUI(tk.Frame):
         except Exception as e:
             self.file_listbox.delete(0, tk.END)
             self.file_listbox.insert(tk.END, f"エラー: {e}")
-            logger.error("ファイルリストの取得中にエラー: %s", e)
+            logger.error("ファイルリスト取得中にエラー: %s", e)
     
     def show_selected_info(self):
         try:
@@ -83,13 +86,10 @@ class FileSearchUI(tk.Frame):
                 file = files[idx]
                 if file.lower().endswith(".xlsx"):
                     in_file_path = os.path.join(self.base_folder, file)
-                    from infrastructure.file_copier import copy_xlsx_file
                     tmp_file_path = copy_xlsx_file(in_file_path, self.base_folder)
                     base_name, _ = os.path.splitext(os.path.basename(tmp_file_path))
                     out_filename = f"{base_name}.json"
-                    from infrastructure.xlsx_extractor import extract_xlsx_to_json
                     data = extract_xlsx_to_json(tmp_file_path)
-                    from infrastructure.json_writer import write_json_output
                     json_filepath = write_json_output(data, out_filename)
                     json_file_paths.append(f"{file} => {json_filepath}")
             if json_file_paths:
@@ -104,7 +104,6 @@ class FileSearchUI(tk.Frame):
     
     def merge_json_files(self):
         try:
-            from infrastructure.json_merger import merge_json_files_by_unit
             output_paths = merge_json_files_by_unit(self.keywords)
             if output_paths:
                 msg_lines = [f"{unit}: {path}" for unit, path in output_paths.items()]
