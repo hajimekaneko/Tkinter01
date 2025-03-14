@@ -9,6 +9,7 @@ from infrastructure.file_copier import copy_xlsx_file
 from infrastructure.json_writer import write_json_output
 from infrastructure.xlsx_extractor import extract_xlsx_to_json
 from infrastructure.json_merger import merge_json_files_by_unit
+from infrastructure.clear_folder import clear_folder_contents
 
 logger = logging.getLogger(__name__)
 
@@ -45,20 +46,22 @@ class FileSearchUI(tk.Frame):
         tk.Label(list_frame, text="ファイル一覧").pack(anchor='w')
         self.file_listbox = tk.Listbox(list_frame, selectmode=tk.EXTENDED)
         self.file_listbox.pack(fill=tk.BOTH, expand=True)
-    
+
+
     def select_folder(self):
-        # TMP_FOLDER の内容を削除
+        # TMP_FOLDER の内容のみ削除（フォルダ自体は残す）
         if os.path.exists(TMP_FOLDER):
             try:
-                shutil.rmtree(TMP_FOLDER)
-                logger.info("TMP フォルダの内容を削除しました: %s", TMP_FOLDER)
+                clear_folder_contents(TMP_FOLDER)
+                logger.info("TMP フォルダ内の内容を削除しました: %s", TMP_FOLDER)
             except Exception as e:
-                logger.error("TMP フォルダ削除に失敗: %s", e)
+                logger.error("TMP フォルダ内内容削除に失敗: %s", e)
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.base_folder = folder_path
             self.populate_file_list(folder_path)
             self.status_label.config(text="次の作業: XLSXファイルを選択し、情報取得ボタンをクリックしてください")
+
     
     def populate_file_list(self, folder_path):
         self.file_listbox.delete(0, tk.END)
