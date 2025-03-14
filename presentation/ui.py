@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 from use_cases.file_search_usecase import get_matched_files
-from config import TMP_FOLDER, KEYWORDS
+from config import TMP_FOLDER, KEYWORDS, OUT_FOLDER
 from infrastructure.file_copier import copy_xlsx_file
 from infrastructure.json_writer import write_json_output
 from infrastructure.xlsx_extractor import extract_xlsx_to_json
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class FileSearchUI(tk.Frame):
     def __init__(self, root, keywords):
-        super().__init__(root, width=600, height=600, borderwidth=1, relief='groove')
+        super().__init__(root, width=600, height=400, borderwidth=1, relief='groove')
         self.root = root
         self.keywords = keywords  # 例: ["金子", "本間"]
         self.base_folder = None   # ユーザーが選択した INフォルダのパス
@@ -44,8 +44,19 @@ class FileSearchUI(tk.Frame):
         list_frame = tk.Frame(self)
         list_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
         tk.Label(list_frame, text="ファイル一覧").pack(anchor='w')
-        self.file_listbox = tk.Listbox(list_frame, selectmode=tk.EXTENDED)
-        self.file_listbox.pack(fill=tk.BOTH, expand=True)
+        
+        # ファイル一覧とスクロールバー用のフレーム（高さを300ピクセルに固定）
+        listbox_frame = tk.Frame(list_frame, height=300)
+        listbox_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        
+        # 縦スクロールバーを作成
+        scrollbar = tk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Listbox にスクロールバーを連動
+        self.file_listbox = tk.Listbox(listbox_frame, selectmode=tk.EXTENDED, yscrollcommand=scrollbar.set)
+        self.file_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=self.file_listbox.yview)
 
 
     def select_folder(self):
@@ -79,6 +90,9 @@ class FileSearchUI(tk.Frame):
     
     def show_selected_info(self):
         try:
+            # Outフォルダの内容を削除（Outフォルダ自体は残す）
+            clear_folder_contents(OUT_FOLDER)
+            
             selected_indices = self.file_listbox.curselection()
             files = self.file_listbox.get(0, tk.END)
             if not selected_indices:
@@ -100,13 +114,20 @@ class FileSearchUI(tk.Frame):
             else:
                 msg = "選択されたファイルの中に XLSX ファイルはありませんでした。"
             messagebox.showinfo("出力完了", msg)
-            self.status_label.config(text="次の作業: 合算処理を行うか、再度ファイルを選択するか、終了してください")
+            # 自動合算処理も実行（既存の処理と連動する場合はこの処理を残す）
+            self.merge_json_files()  # 情報取得後に自動で合算処理を実行
+            self.status_label.config(text="次の作業: 合算処理完了。再度ファイルを選択するか、終了してください")
         except Exception as e:
             logger.error("XLSX抽出処理中にエラー: %s", e)
             messagebox.showerror("エラー", f"XLSX抽出処理中にエラーが発生しました:\n{e}")
+
+
     
     def merge_json_files(self):
         try:
+            # Outフォルダの内容を削除（Outフォルダ自体は残す）
+            clear_folder_contents(OUT_FOLDER)
+            
             output_paths = merge_json_files_by_unit(self.keywords)
             if output_paths:
                 msg_lines = [f"{unit}: {path}" for unit, path in output_paths.items()]
@@ -118,3 +139,5 @@ class FileSearchUI(tk.Frame):
         except Exception as e:
             logger.error("合算処理中にエラー: %s", e)
             messagebox.showerror("エラー", f"合算処理中にエラーが発生しました:\n{e}")
+
+
