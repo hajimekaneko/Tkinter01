@@ -2,7 +2,9 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import logging
 import os
+import shutil
 from use_cases.file_search_usecase import get_matched_files
+from config import TMP_FOLDER, KEYWORDS
 from infrastructure.json_writer import write_json_output
 
 logger = logging.getLogger(__name__)
@@ -11,8 +13,8 @@ class FileSearchUI(tk.Frame):
     def __init__(self, root, keywords):
         super().__init__(root, width=600, height=600, borderwidth=1, relief='groove')
         self.root = root
-        self.keywords = keywords  # 例: ["金子", "丸山"]
-        self.base_folder = None   # ユーザーが選択したINフォルダのパス
+        self.keywords = keywords  # 例: ["金子", "本間"]
+        self.base_folder = None   # ユーザーが選択した INフォルダのパス
         self.pack(fill=tk.BOTH, expand=True)
         self.pack_propagate(0)
         self.create_widgets()
@@ -42,20 +44,16 @@ class FileSearchUI(tk.Frame):
         self.file_listbox.pack(fill=tk.BOTH, expand=True)
     
     def select_folder(self):
-        # プロジェクトルートと Tmp フォルダを特定し、Tmp フォルダが存在する場合は削除
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.join(current_dir, "..", "..")
-        tmp_folder = os.path.join(project_root, "Tmp")
-        if os.path.exists(tmp_folder):
+        # TMP_FOLDER の内容を削除
+        if os.path.exists(TMP_FOLDER):
             try:
-                shutil.rmtree(tmp_folder)
-                logger.info("Tmp フォルダの内容を削除しました: %s", tmp_folder)
+                shutil.rmtree(TMP_FOLDER)
+                logger.info("TMP フォルダの内容を削除しました: %s", TMP_FOLDER)
             except Exception as e:
-                logger.error("Tmp フォルダ削除に失敗: %s", e)
-        
+                logger.error("TMP フォルダ削除に失敗: %s", e)
         folder_path = filedialog.askdirectory()
         if folder_path:
-            self.base_folder = folder_path  # ユーザーが選択したINフォルダのパスを保持
+            self.base_folder = folder_path
             self.populate_file_list(folder_path)
             self.status_label.config(text="次の作業: XLSXファイルを選択し、情報取得ボタンをクリックしてください")
     
@@ -74,42 +72,26 @@ class FileSearchUI(tk.Frame):
             logger.error("ファイルリストの取得中にエラー: %s", e)
     
     def show_selected_info(self):
-        """
-        選択された XLSX ファイルについて、
-          1. INフォルダから Tmpフォルダへ、対象ファイルをコピー(copy_xlsx_file を利用）
-          2. Tmpフォルダ内のコピー先ファイルを対象に、XLSX の内容を JSON に変換する。
-             出力ファイル名は、コピー先ファイル名の拡張子 .xlsx を .json に置換します。
-        結果は、各元ファイルと生成された JSON ファイルのパス一覧をメッセージボックスで表示します。
-        """
         try:
             selected_indices = self.file_listbox.curselection()
             files = self.file_listbox.get(0, tk.END)
             if not selected_indices:
                 messagebox.showinfo("情報", "ファイルが選択されていません。")
                 return
-            
             json_file_paths = []
             for idx in selected_indices:
                 file = files[idx]
                 if file.lower().endswith(".xlsx"):
                     in_file_path = os.path.join(self.base_folder, file)
-                    # コピー処理：INフォルダから Tmpフォルダへコピー
                     from infrastructure.file_copier import copy_xlsx_file
                     tmp_file_path = copy_xlsx_file(in_file_path, self.base_folder)
-                    
-                    # JSON出力ファイル名：元ファイルの相対パス（区切りはアンダースコア）から拡張子を .json に
                     base_name, _ = os.path.splitext(os.path.basename(tmp_file_path))
                     out_filename = f"{base_name}.json"
-                    
-                    # XLSX の内容を JSON 辞書として抽出
                     from infrastructure.xlsx_extractor import extract_xlsx_to_json
                     data = extract_xlsx_to_json(tmp_file_path)
-                    
-                    # JSONファイルとして出力（出力先は Tmp フォルダ）
                     from infrastructure.json_writer import write_json_output
                     json_filepath = write_json_output(data, out_filename)
                     json_file_paths.append(f"{file} => {json_filepath}")
-            
             if json_file_paths:
                 msg = "以下の XLSX ファイルから JSON 出力が作成されました:\n" + "\n".join(json_file_paths)
             else:
@@ -121,12 +103,6 @@ class FileSearchUI(tk.Frame):
             messagebox.showerror("エラー", f"XLSX抽出処理中にエラーが発生しました:\n{e}")
     
     def merge_json_files(self):
-        """
-        Tmpフォルダ内の JSON ファイルを、keywords に基づく単位ごとに合算し、
-        各合算結果を OUT フォルダに output_{unit}.json として出力します。
-        合算処理は、各 JSON ファイル内の全シート・全グループの各行について、
-        「グループ」「指図書No」「補足」を主キーとし、「時間」を合計します。
-        """
         try:
             from infrastructure.json_merger import merge_json_files_by_unit
             output_paths = merge_json_files_by_unit(self.keywords)
