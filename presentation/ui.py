@@ -14,7 +14,7 @@ from infrastructure.json_to_csv import convert_json_file_to_csv  # 追加
 
 logger = logging.getLogger(__name__)
 
-class FileSearchUI(tk.Frame):
+class ResultMergeUI(tk.Frame):
     def __init__(self, root, keywords):
         super().__init__(root, width=600, height=400, borderwidth=1, relief='groove')
         self.root = root

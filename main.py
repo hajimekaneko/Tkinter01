@@ -2,7 +2,7 @@ import tkinter as tk
 import logging
 import os
 import sys
-from presentation.ui import FileSearchUI
+from presentation.ui import ResultMergeUI
 from config import PROJECT_ROOT, ERR_FOLDER, KEYWORDS
 
 def tk_exception_handler(exc, val, tb):
@@ -28,7 +28,7 @@ def main():
         root = tk.Tk()
         root.title("実績合算・分析アプリ")
         root.report_callback_exception = tk_exception_handler
-        FileSearchUI(root, KEYWORDS)
+        ResultMergeUI(root, KEYWORDS)
         root.mainloop()
     except Exception as e:
         logging.exception("Tkinter アプリケーション起動時にエラーが発生しました: %s", e)
